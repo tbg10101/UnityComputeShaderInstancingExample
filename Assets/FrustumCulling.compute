@@ -1,0 +1,36 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel FrustumCull
+
+float radius;
+
+StructuredBuffer<float3> positions;
+StructuredBuffer<float3> rotations;
+RWStructuredBuffer<bool> votes;
+
+struct plane {
+	float3 origin;
+	float3 normal;
+};
+
+StructuredBuffer<plane> frustumPlanes; // 6 values to define 6 planes
+
+bool checkPlanePoint(float3 x, float3 p, float3 n) {
+	float signedDistance = dot(n, x) + length(p);
+	return signedDistance > 0;
+}
+
+bool checkPlaneSphere(float3 x, float r, float3 p, float3 n) {
+	float3 farthestPositionInsidePlane = x + n * r;
+	return checkPlanePoint(farthestPositionInsidePlane, p, n);
+}
+
+[numthreads(8,8,1)]
+void FrustumCull (uint index : SV_GroupIndex) {
+    votes[index] =
+		checkPlaneSphere(positions[index], radius, frustumPlanes[0].origin, frustumPlanes[0].normal) &&
+		checkPlaneSphere(positions[index], radius, frustumPlanes[1].origin, frustumPlanes[1].normal) &&
+		checkPlaneSphere(positions[index], radius, frustumPlanes[2].origin, frustumPlanes[2].normal) &&
+		checkPlaneSphere(positions[index], radius, frustumPlanes[3].origin, frustumPlanes[3].normal) &&
+		checkPlaneSphere(positions[index], radius, frustumPlanes[4].origin, frustumPlanes[4].normal) &&
+		checkPlaneSphere(positions[index], radius, frustumPlanes[5].origin, frustumPlanes[5].normal);
+}
